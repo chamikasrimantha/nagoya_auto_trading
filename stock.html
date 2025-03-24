@@ -5,14 +5,105 @@
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Car Lease</title>
+	<title>Stock | Nagoya Auto Trading</title>
 	<link href="css/bootstrap.min.css" rel="stylesheet">
 	<link href="css/font-awesome.min.css" rel="stylesheet">
 	<link href="css/global.css" rel="stylesheet">
 	<link href="css/models.css" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
 	<script src="js/bootstrap.bundle.min.js"></script>
+	<style>
+		.fixed-img {
+			width: 100% !important;
+			/* Ensures 100% width */
+			height: 100% !important;
+			/* Fixed height of 80px */
+			object-fit: cover;
+			/* Ensures the image covers the area without distortion */
+		}
+	</style>
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+		import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
 
+		const firebaseConfig = {
+			apiKey: "AIzaSyCXuKCcLMPIlRKE2HS36lVJG2kjBqnfREk",
+			authDomain: "nagoya-auto.firebaseapp.com",
+			projectId: "nagoya-auto",
+			storageBucket: "nagoya-auto.firebasestorage.app",
+			messagingSenderId: "718031210560",
+			appId: "1:718031210560:web:fde1b59ada6102eca437a5",
+			measurementId: "G-E2VNX8VFCZ"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const db = getFirestore(app);
+
+		async function loadCars() {
+			const carContainer = document.getElementById("car-container");
+			const querySnapshot = await getDocs(collection(db, "cars"));
+
+			querySnapshot.forEach((doc) => {
+				const car = doc.data();
+				const carCard = `
+                    <div class="col-md-4">
+                        <div class="model_pg1i clearfix">
+                            <div class="model_pg1i1">
+    							<div class="grid clearfix">
+        							<figure class="effect-jazz mb-0">
+            							<a href="#">
+                							<img src="${car.image1}" class="w-100 fixed-img" alt="${car.carName}">
+            							</a>
+        							</figure>
+    							</div>
+							</div>
+
+                            <div class="model_m p-3 clearfix border-top-0">
+                                <div class="model_pg1i2 row">
+                                    <div class="col-md-6 col-sm-6">
+                                        <div class="model_pg1i2l">
+                                            <h4>${car.carName}</h4>
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-sm-6">
+                                        <div class="model_pg1i2r text-end">
+                                            <h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> ${car.price}</h3>
+                                            <h6 class="mb-0 font_14">Price</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="model_pg1i3 row mt-4 mb-4">
+                                    <div class="col-md-6 col-sm-6">
+                                        <div class="model_pg1i3l">
+                                            <h6><i class="fa fa-car col_oran me-1"></i> ${car.transmission}</h6>
+                                            <h6 class="mb-0 mt-3"><i class="fa fa-tint col_oran me-1"></i> ${car.fuelType}</h6>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 col-sm-6">
+                                        <div class="model_pg1i3l text-end">
+                                            <h6><i class="fa fa-user col_oran me-1"></i> ${car.steeringWheel} Hand</h6>
+                                            <h6 class="mb-0 mt-3"><i class="fa fa-calendar col_oran me-1"></i> ${car.cc} CC</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr>
+                                <div class="model_pg1i4 row text-center mt-4">
+                                    <div class="col-md-12">
+                                        <h6 class="mb-0"><a class="button" href="#">View <i class="fa fa-check-circle ms-1"></i></a></h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+				carContainer.innerHTML += carCard;
+			});
+		}
+
+		loadCars();
+	</script>
 </head>
 
 <body>
@@ -84,9 +175,9 @@
 					<div class="container-xl">
 						<div class="row center_o1">
 							<div class="col-md-12">
-								<h2 class="text-white">Vehicle Models</h2>
+								<h2 class="text-white">Stock</h2>
 								<h6 class="mb-0 mt-3 fw-normal col_oran"><a class="text-light" href="#">Home</a> <span
-										class="mx-2 col_light">/</span> Vehicle Models</h6>
+										class="mx-2 col_light">/</span> Stock</h6>
 							</div>
 						</div>
 					</div>
@@ -98,339 +189,8 @@
 
 	<section id="model_pg" class="p_3">
 		<div class="container-xl">
-			<div class="row model_pg1">
-				<div class="col-md-4">
-					<div class="model_pg1i clearfix">
-						<div class="model_pg1i1">
-							<div class="grid clearfix">
-								<figure class="effect-jazz mb-0">
-									<a href="#"><img src="img/15.jpg" class="w-100" alt="abc"></a>
-								</figure>
-							</div>
-						</div>
-						<div class="model_m p-3 clearfix border-top-0">
-							<div class="model_pg1i2 row">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2l">
-										<h4>Audi 1</h4>
-										<span class="font_12 col_yell">
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star-half-o"></i>
-										</span>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2r text-end">
-										<h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> 73</h3>
-										<h6 class="mb-0 font_14">per day</h6>
-									</div>
-								</div>
-							</div>
-							<div class="model_pg1i3 row mt-4 mb-4">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l">
-										<h6><i class="fa fa-car col_oran me-1"></i> Sedan</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-male col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l text-end">
-										<h6><i class="fa fa-suitcase col_oran me-1"></i> 2 Luggage</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-female col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-							</div>
-							<hr>
-
-							<div class="model_pg1i4 row text-center mt-4">
-								<div class="col-md-12">
-									<h6 class="mb-0"><a class="button" href="#">Book Ride <i
-												class="fa fa-check-circle ms-1"></i> </a></h6>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-4">
-					<div class="model_pg1i clearfix">
-						<div class="model_pg1i1">
-							<div class="grid clearfix">
-								<figure class="effect-jazz mb-0">
-									<a href="#"><img src="img/16.jpg" class="w-100" alt="abc"></a>
-								</figure>
-							</div>
-						</div>
-						<div class="model_m p-3 clearfix border-top-0">
-							<div class="model_pg1i2 row">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2l">
-										<h4>Audi 2</h4>
-										<span class="font_12 col_yell">
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star-half-o"></i>
-										</span>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2r text-end">
-										<h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> 78</h3>
-										<h6 class="mb-0 font_14">per day</h6>
-									</div>
-								</div>
-							</div>
-							<div class="model_pg1i3 row mt-4 mb-4">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l">
-										<h6><i class="fa fa-car col_oran me-1"></i> Sedan</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-male col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l text-end">
-										<h6><i class="fa fa-suitcase col_oran me-1"></i> 2 Luggage</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-female col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-							</div>
-							<hr>
-
-							<div class="model_pg1i4 row text-center mt-4">
-								<div class="col-md-12">
-									<h6 class="mb-0"><a class="button" href="#">Book Ride <i
-												class="fa fa-check-circle ms-1"></i> </a></h6>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-4">
-					<div class="model_pg1i clearfix">
-						<div class="model_pg1i1">
-							<div class="grid clearfix">
-								<figure class="effect-jazz mb-0">
-									<a href="#"><img src="img/17.jpg" class="w-100" alt="abc"></a>
-								</figure>
-							</div>
-						</div>
-						<div class="model_m p-3 clearfix border-top-0">
-							<div class="model_pg1i2 row">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2l">
-										<h4>Audi 3</h4>
-										<span class="font_12 col_yell">
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star-half-o"></i>
-										</span>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2r text-end">
-										<h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> 82</h3>
-										<h6 class="mb-0 font_14">per day</h6>
-									</div>
-								</div>
-							</div>
-							<div class="model_pg1i3 row mt-4 mb-4">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l">
-										<h6><i class="fa fa-car col_oran me-1"></i> Sedan</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-male col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l text-end">
-										<h6><i class="fa fa-suitcase col_oran me-1"></i> 2 Luggage</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-female col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-							</div>
-							<hr>
-
-							<div class="model_pg1i4 row text-center mt-4">
-								<div class="col-md-12">
-									<h6 class="mb-0"><a class="button" href="#">Book Ride <i
-												class="fa fa-check-circle ms-1"></i> </a></h6>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="row model_pg1 mt-4">
-				<div class="col-md-4">
-					<div class="model_pg1i clearfix">
-						<div class="model_pg1i1">
-							<div class="grid clearfix">
-								<figure class="effect-jazz mb-0">
-									<a href="#"><img src="img/18.jpg" class="w-100" alt="abc"></a>
-								</figure>
-							</div>
-						</div>
-						<div class="model_m p-3 clearfix border-top-0">
-							<div class="model_pg1i2 row">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2l">
-										<h4>Audi 1</h4>
-										<span class="font_12 col_yell">
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star-half-o"></i>
-										</span>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2r text-end">
-										<h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> 73</h3>
-										<h6 class="mb-0 font_14">per day</h6>
-									</div>
-								</div>
-							</div>
-							<div class="model_pg1i3 row mt-4 mb-4">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l">
-										<h6><i class="fa fa-car col_oran me-1"></i> Sedan</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-male col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l text-end">
-										<h6><i class="fa fa-suitcase col_oran me-1"></i> 2 Luggage</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-female col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-							</div>
-							<hr>
-
-							<div class="model_pg1i4 row text-center mt-4">
-								<div class="col-md-12">
-									<h6 class="mb-0"><a class="button" href="#">Book Ride <i
-												class="fa fa-check-circle ms-1"></i> </a></h6>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-4">
-					<div class="model_pg1i clearfix">
-						<div class="model_pg1i1">
-							<div class="grid clearfix">
-								<figure class="effect-jazz mb-0">
-									<a href="#"><img src="img/19.jpg" class="w-100" alt="abc"></a>
-								</figure>
-							</div>
-						</div>
-						<div class="model_m p-3 clearfix border-top-0">
-							<div class="model_pg1i2 row">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2l">
-										<h4>Audi 2</h4>
-										<span class="font_12 col_yell">
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star-half-o"></i>
-										</span>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2r text-end">
-										<h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> 78</h3>
-										<h6 class="mb-0 font_14">per day</h6>
-									</div>
-								</div>
-							</div>
-							<div class="model_pg1i3 row mt-4 mb-4">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l">
-										<h6><i class="fa fa-car col_oran me-1"></i> Sedan</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-male col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l text-end">
-										<h6><i class="fa fa-suitcase col_oran me-1"></i> 2 Luggage</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-female col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-							</div>
-							<hr>
-
-							<div class="model_pg1i4 row text-center mt-4">
-								<div class="col-md-12">
-									<h6 class="mb-0"><a class="button" href="#">Book Ride <i
-												class="fa fa-check-circle ms-1"></i> </a></h6>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-4">
-					<div class="model_pg1i clearfix">
-						<div class="model_pg1i1">
-							<div class="grid clearfix">
-								<figure class="effect-jazz mb-0">
-									<a href="#"><img src="img/20.jpg" class="w-100" alt="abc"></a>
-								</figure>
-							</div>
-						</div>
-						<div class="model_m p-3 clearfix border-top-0">
-							<div class="model_pg1i2 row">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2l">
-										<h4>Audi 3</h4>
-										<span class="font_12 col_yell">
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star"></i>
-											<i class="fa fa-star-half-o"></i>
-										</span>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i2r text-end">
-										<h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> 82</h3>
-										<h6 class="mb-0 font_14">per day</h6>
-									</div>
-								</div>
-							</div>
-							<div class="model_pg1i3 row mt-4 mb-4">
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l">
-										<h6><i class="fa fa-car col_oran me-1"></i> Sedan</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-male col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-								<div class="col-md-6 col-sm-6">
-									<div class="model_pg1i3l text-end">
-										<h6><i class="fa fa-suitcase col_oran me-1"></i> 2 Luggage</h6>
-										<h6 class="mb-0 mt-3"><i class="fa fa-female col_oran me-1"></i> 6 Seats</h6>
-									</div>
-								</div>
-							</div>
-							<hr>
-
-							<div class="model_pg1i4 row text-center mt-4">
-								<div class="col-md-12">
-									<h6 class="mb-0"><a class="button" href="#">Book Ride <i
-												class="fa fa-check-circle ms-1"></i> </a></h6>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+			<div class="row model_pg1" id="car-container">
+				<!-- Cars will be loaded here dynamically -->
 			</div>
 		</div>
 	</section>
@@ -511,7 +271,8 @@
 				<div class="col-md-8">
 					<div class="footer_2l">
 						<p class="mb-0 mt-1">© 2025 Nagoya Auto Trading. All Rights Reserved | Designed & Developed by
-							<a class="col_green" href="https://www.easycat.live/">EasyCat Technologies</a></p>
+							<a class="col_green" href="https://www.easycat.live/">EasyCat Technologies</a>
+						</p>
 					</div>
 				</div>
 				<div class="col-md-4">
