@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stock | Nagoya Auto Trading</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+    <link href="css/global.css" rel="stylesheet">
+    <link href="css/models.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <style>
+        .fixed-img {
+            width: 100% !important;
+            /* Ensures 100% width */
+            height: 100% !important;
+            /* Fixed height of 80px */
+            object-fit: cover;
+            /* Ensures the image covers the area without distortion */
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="main_o clearfix position-relative">
+        <div class="main_1 clearfix position-absolute top-0 w-100">
+            <section id="header">
+                <nav class="navbar navbar-expand-md navbar-light" id="navbar_sticky">
+                    <div class="container-xl">
+                        <a class="navbar-brand fs-3 p-0 fw-bold text-white" href="index.html">
+                            <img src="img/logo.png" alt="Car Logo" class="me-1 fs-2 align-middle" style="height: 60px;">
+                            <!-- CAR <br> 
+		<span class="fs-5 span_1">Lease</span> -->
+                        </a>
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                            aria-expanded="false" aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                            <ul class="navbar-nav mb-0 ">
+                                <li class="nav-item">
+                                    <a class="nav-link" aria-current="page" href="index.html">Home</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="about.html">About </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link active" href="stock.html">Stock </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="branches.html">Branches </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="team.html">Team</a>
+                                </li>
+                                <!-- <li class="nav-item dropdown">
+									<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+										data-bs-toggle="dropdown" aria-expanded="false">
+										Pages
+									</a>
+									<ul class="dropdown-menu drop_1" aria-labelledby="navbarDropdown">
+										<li><a class="dropdown-item" href="login.html"> Login</a></li>
+										<li><a class="dropdown-item border-0" href="register.html"> Register</a></li>
+									</ul>
+								</li> -->
+                                <li class="nav-item">
+                                    <a class="nav-link" href="contact.html">Contact</a>
+                                </li>
+                            </ul>
+                            <ul class="navbar-nav mb-0 ms-auto">
+                                <!-- <li class="nav-item">
+									<a class="nav-link" href="login.html">Sign In</a>
+								</li> -->
+                                <li class="nav-item">
+                                    <a class="nav-link button_2 ms-2 me-2" href="register.html">Whatsapp <i
+                                            class="fa fa-whatsapp ms-1"></i></a>
+                                </li>
+
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
+            </section>
+        </div>
+        <div class="main_2 clearfix">
+            <section id="center" class="center_o">
+                <div class="center_om clearfix">
+                    <div class="container-xl">
+                        <div class="row center_o1">
+                            <div class="col-md-12">
+                                <h2 class="text-white">Stock</h2>
+                                <h6 class="mb-0 mt-3 fw-normal col_oran"><a class="text-light" href="#">Home</a> <span
+                                        class="mx-2 col_light">/</span> Stock</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+
+    <!-- Car Details Section -->
+    <section class="car-details" id="car-details">
+        <div class="container">
+            <div class="row" data-aos="fade-up">
+                <div class="col-lg-12">
+
+                    <div id="car-details-container" class="car-details-container"></div>
+
+                    <script type="module">
+                        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+                        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+
+                        // Firebase Configuration
+                        const firebaseConfig = {
+                            apiKey: "AIzaSyCXuKCcLMPIlRKE2HS36lVJG2kjBqnfREk",
+                            authDomain: "nagoya-auto.firebaseapp.com",
+                            projectId: "nagoya-auto",
+                            storageBucket: "nagoya-auto.firebasestorage.app",
+                            messagingSenderId: "718031210560",
+                            appId: "1:718031210560:web:fde1b59ada6102eca437a5",
+                            measurementId: "G-E2VNX8VFCZ"
+                        };
+
+                        // Initialize Firebase
+                        const app = initializeApp(firebaseConfig);
+                        const db = getFirestore(app);
+
+                        const stockId = new URLSearchParams(window.location.search).get("stockId");
+
+                        if (!stockId) {
+                            alert("Stock ID is missing in the URL.");
+                        } else {
+                            async function loadCarDetails() {
+                                const carDetailsContainer = document.getElementById("car-details-container");
+                                carDetailsContainer.innerHTML = "<p>Loading car details...</p>";
+
+                                try {
+                                    const docRef = doc(db, "cars", stockId);
+                                    const docSnap = await getDoc(docRef);
+
+                                    if (docSnap.exists()) {
+                                        const data = docSnap.data();
+                                        const images = [data.image1, data.image2, data.image3, data.image4, data.image5].filter(Boolean);
+
+                                        // Fetch names for make, model, and color
+                                        const makeName = await getMakeName(data.make);
+                                        const modelName = await getModelName(data.model);
+                                        const colorName = await getColorName(data.color);
+                                        const yearName = await getYearName(data.year);
+
+                                        let imageGallery = "";
+                                        images.forEach((img, index) => {
+                                            imageGallery += `<div class="carousel-item ${index === 0 ? 'active' : ''}">
+                                                            <img src="${img}" class="d-block w-100" alt="Car Image">
+                                                        </div>`;
+                                        });
+
+                                        carDetailsContainer.innerHTML = `
+                                        <div class="car-card">
+                                        <div id="carCarousel" class="carousel slide" data-bs-ride="carousel">
+                                            <div class="carousel-inner">${imageGallery}</div>
+                                            <button class="carousel-control-prev" type="button" data-bs-target="#carCarousel" data-bs-slide="prev">
+                                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                            </button>
+                                            <button class="carousel-control-next" type="button" data-bs-target="#carCarousel" data-bs-slide="next">
+                                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                            </button>
+                                        </div>
+
+                                        <h2>${data.carName} - ${data.yearName}</h2>
+                                        <h4 class="price">Price: ${data.price}</h4>
+                                        
+                                        <ul class="car-specs">
+                                            <li><strong>Make:</strong> ${makeName}</li>
+                                            <li><strong>Model:</strong> ${modelName}</li>
+                                            <li><strong>Chassis No:</strong> ${data.chassisNo}</li>
+                                            <li><strong>Color:</strong> ${colorName}</li>
+                                            <li><strong>Fuel Type:</strong> ${data.fuelType}</li>
+                                            <li><strong>CC:</strong> ${data.cc}</li>
+                                            <li><strong>Transmission:</strong> ${data.transmission}</li>
+                                            <li><strong>Steering Wheel:</strong> ${data.steeringWheel}</li>
+                                        </ul>
+                                    </div>
+                                    `;
+                                    } else {
+                                        carDetailsContainer.innerHTML = "<p>No such car found.</p>";
+                                    }
+                                } catch (error) {
+                                    console.error("Error loading car details:", error);
+                                    carDetailsContainer.innerHTML = "<p>Error loading car details.</p>";
+                                }
+                            }
+
+                            // Fetch Make Name based on ID
+                            async function getMakeName(makeId) {
+                                if (!makeId) return "Unknown Make";
+                                const makeRef = doc(db, "Make", makeId);
+                                const makeSnap = await getDoc(makeRef);
+                                return makeSnap.exists() ? makeSnap.data().name : "Unknown Make";
+                            }
+
+                            // Fetch Model Name based on ID
+                            async function getModelName(modelId) {
+                                if (!modelId) return "Unknown Model";
+                                const modelRef = doc(db, "Model", modelId);
+                                const modelSnap = await getDoc(modelRef);
+                                return modelSnap.exists() ? modelSnap.data().name : "Unknown Model";
+                            }
+
+                            // Fetch Color Name based on ID
+                            async function getColorName(colorId) {
+                                if (!colorId) return "Unknown Color";
+                                const colorRef = doc(db, "Color", colorId);
+                                const colorSnap = await getDoc(colorRef);
+                                return colorSnap.exists() ? colorSnap.data().name : "Unknown Color";
+                            }
+
+                            async function getYearName(yearId) {
+                                if (!yearId) return "Unknown Year";
+                                const yearRef = doc(db, "Year", yearId);
+                                const yearSnap = await getDoc(yearRef);
+                                return yearSnap.exists() ? yearSnap.data().name : "Unknown Year";
+                            }
+
+                            loadCarDetails();
+                        }
+                    </script>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Custom Styling -->
+    <style>
+        .car-details {
+            padding: 40px 20px;
+            background: #f9f9f9;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .car-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: left;
+        }
+
+        .price {
+            font-size: 1.5rem;
+            color: #e74c3c;
+            margin: 10px 0;
+        }
+
+        .car-specs {
+            list-style: none;
+            padding: 0;
+        }
+
+        .car-specs li {
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        /* Carousel Styling */
+        .carousel {
+            max-width: 600px;
+            margin: 0 auto 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .carousel img {
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        .carousel-control-prev,
+        .carousel-control-next {
+            filter: invert(100%);
+        }
+    </style>
+
+
+    <section id="ride">
+        <div class="ride_m">
+            <div class="container-xl">
+                <div class="row ride_1">
+                    <div class="col-md-8">
+                        <div class="ride_1l">
+                            <h1 class="text-white">Save big with our cheap <br> car rental!</h1>
+                            <p class="text-light mb-0 fs-4 mt-3">Top Airports. Local Suppliers. 24/7 Support.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="ride_1r mt-4 text-end">
+                            <h6 class="mb-0"><a class="button_2" href="#">Book Ride <i
+                                        class="fa fa-check-circle ms-1"></i> </a></h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="footer" class="pt-3 pb-3">
+        <div class="container-xl">
+            <div class="row footer_1">
+                <div class="col-md-4">
+                    <div class="footer_1i">
+                        <h4> Nagoya Auto Trading</h4>
+                        <p class="mt-3">At Nagoya Auto Trading, we focus on providing top-quality services and products
+                            to meet your
+                            automotive needs.
+                        </p>
+                        <h6 class="mt-3 fw-normal"><i class="fa fa-map col_oran me-1"></i> Nagoya, Japan</h6>
+                        <h6 class="mt-3 fw-normal"><a href="#"><i class="fa fa-phone col_oran me-1"></i> +(94) 76 184
+                                4962</a></h6>
+                        <h6 class="mt-3 mb-0 fw-normal"><a href="#"><i class="fa fa-envelope col_oran me-1"></i>
+                                info@nagoya-auto-trading.com</a>
+                        </h6>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="footer_1i">
+                        <h4>COMPANY</h4>
+                        <div class="row">
+                            <h6 class="fw-normal mt-2 col-md-12 col-6"><a href="index.html">Nagoya</a></h6>
+                            <h6 class="fw-normal mt-2 col-md-12 col-6"><a href="about.html">About Us</a></h6>
+                            <h6 class="fw-normal mt-2 col-md-12 col-6"><a href="blog.html">Branches</a></h6>
+                            <h6 class="fw-normal mt-2 col-md-12 col-6"><a href="models.html">Stock</a></h6>
+                            <h6 class="fw-normal mt-2 col-md-12 col-6"><a href="team.html">Team</a></h6>
+                            <h6 class="fw-normal mt-2 mb-0 col-md-12 col-6"><a href="contact.html">Contact Us</a></h6>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="footer_1i">
+                        <h4>WORK HOURS</h4>
+                        <p class="mt-3">Mon - Fri: <span class="fw-bold text-black">08:00AM - 05:00PM</span></p>
+                        <p class="mt-3">Sat: <span class="fw-bold text-black">08:00AM - 12:00PM</span></p>
+                        <p class="mt-3 mb-0">Sun: <span class="fw-bold text-black">Closed</span></p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="footer_1i">
+                        <h4>SUBSCRIPTION</h4>
+                        <p class="mt-3">Subscribe your Email address for latest news & updates.</p>
+                        <input class="form-control" placeholder="Enter Email Address" type="text">
+                        <h6 class="mb-0 mt-4"><a class="button pt-3 pb-3" href="#">Submit <i
+                                    class="fa fa-check-circle ms-1"></i>
+                            </a></h6>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div class="row footer_2">
+                <div class="col-md-8">
+                    <div class="footer_2l">
+                        <p class="mb-0 mt-1">© 2025 Nagoya Auto Trading. All Rights Reserved | Designed & Developed by
+                            <a class="col_green" href="https://www.easycat.live/">EasyCat Technologies</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="footer_2r text-end">
+                        <ul class="social-network social-circle mb-0">
+                            <li><a href="#" class="icoRss" title="Rss"><i class="fa fa-facebook"></i></a></li>
+                            <li><a href="#" class="icoFacebook" title="Facebook"><i class="fa fa-instagram"></i></a>
+                            </li>
+                            <li><a href="#" class="icoTwitter" title="Twitter"><i class="fa fa-whatsapp"></i></a></li>
+                            <li><a href="#" class="icoLinkedin" title="Linkedin"><i class="fa fa-linkedin"></i></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        window.onscroll = function () { myFunction() };
+
+        var navbar_sticky = document.getElementById("navbar_sticky");
+        var sticky = navbar_sticky.offsetTop;
+        var navbar_height = document.querySelector('.navbar').offsetHeight;
+
+        function myFunction() {
+            if (window.pageYOffset >= sticky + navbar_height) {
+                navbar_sticky.classList.add("sticky")
+                document.body.style.paddingTop = navbar_height + 'px';
+            } else {
+                navbar_sticky.classList.remove("sticky");
+                document.body.style.paddingTop = '0'
+            }
+        }
+    </script>
+
+</body>
+
+</html>
