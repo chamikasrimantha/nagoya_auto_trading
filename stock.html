@@ -24,7 +24,18 @@
 	</style>
 	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
-		import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+		import {
+			getFirestore,
+			collection,
+			getDocs,
+			query,
+			where,
+			limit,
+			startAfter,
+			orderBy,
+			doc,
+			getDoc
+		} from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
 
 		const firebaseConfig = {
 			apiKey: "AIzaSyCXuKCcLMPIlRKE2HS36lVJG2kjBqnfREk",
@@ -39,76 +50,333 @@
 		const app = initializeApp(firebaseConfig);
 		const db = getFirestore(app);
 
+		let lastVisible = null;
+		let currentPage = 1;
+		let currentFilters = {};
+
+		// Function to create car card HTML
+		function createCarCard(car, carId) {
+			return `
+				<div class="col-md-4">
+					<div class="model_pg1i clearfix">
+						<div class="model_pg1i1">
+							<div class="grid clearfix">
+								<figure class="effect-jazz mb-0">
+									<a href="#">
+										<img src="${car.image1}" class="w-100 fixed-img" alt="${car.carName}">
+									</a>
+								</figure>
+							</div>
+						</div>
+		
+						<div class="model_m p-3 clearfix border-top-0">
+							<div class="model_pg1i2 row">
+								<div class="col-md-6 col-sm-6">
+									<div class="model_pg1i2l">
+										<h4>${car.carName}</h4>
+									</div>
+								</div>
+								<div class="col-md-6 col-sm-6">
+									<div class="model_pg1i2r text-end">
+										<h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> ${car.price}</h3>
+										<h6 class="mb-0 font_14">Price</h6>
+									</div>
+								</div>
+							</div>
+							<div class="model_pg1i3 row mt-4 mb-4">
+								<div class="col-md-6 col-sm-6">
+									<div class="model_pg1i3l">
+										<h6><i class="fa fa-car col_oran me-1"></i> ${car.transmission}</h6>
+										<h6 class="mb-0 mt-3"><i class="fa fa-tint col_oran me-1"></i> ${car.fuelType}</h6>
+									</div>
+								</div>
+								<div class="col-md-6 col-sm-6">
+									<div class="model_pg1i3l text-end">
+										<h6><i class="fa fa-user col_oran me-1"></i> ${car.steeringWheel} Hand</h6>
+										<h6 class="mb-0 mt-3"><i class="fa fa-calendar col_oran me-1"></i> ${car.cc} CC</h6>
+									</div>
+								</div>
+							</div>
+							<hr>
+							<div class="model_pg1i4 row text-center mt-4">
+								<div class="col-md-12">
+									<h6 class="mb-0">
+										<a class="button view-btn" href="stock-details.html?stockId=${carId}">View <i class="fa fa-search ms-1"></i></a>
+									</h6>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			`;
+		}
+
+		// Function to get name from a specific collection
+		async function getNameFromCollection(collectionName, docId) {
+			if (!docId) return '';
+			try {
+				const docRef = doc(db, collectionName, docId);
+				const docSnap = await getDoc(docRef);
+				return docSnap.exists() ? docSnap.data().name : docId;
+			} catch (error) {
+				console.error(`Error fetching name from ${collectionName}:`, error);
+				return docId;
+			}
+		}
+
+		// Function to populate dropdown options
+		async function populateDropdowns() {
+			const carCollection = collection(db, "cars");
+			const snapshot = await getDocs(carCollection);
+
+			// Extract unique values for each filter
+			const makes = new Map();
+			const models = new Map();
+			const colors = new Map();
+			const years = new Set();
+			const fuelTypes = new Set();
+			const transmissions = new Set();
+			const steeringWheels = new Set();
+
+			// Collect all unique IDs first
+			snapshot.forEach(doc => {
+				const car = doc.data();
+				makes.set(car.make, car.make);
+				models.set(car.model, car.model);
+				colors.set(car.color, car.color);
+				years.add(car.year);
+				fuelTypes.add(car.fuelType);
+				transmissions.add(car.transmission);
+				steeringWheels.add(car.steeringWheel);
+			});
+
+			// Populate dropdowns with names
+			await Promise.all([
+				populateDropdown('makeFilter', await Promise.all(
+					Array.from(makes.keys()).map(async (id) => ({
+						id: id,
+						name: await getNameFromCollection('Make', id)
+					}))
+				)),
+				populateDropdown('modelFilter', await Promise.all(
+					Array.from(models.keys()).map(async (id) => ({
+						id: id,
+						name: await getNameFromCollection('Model', id)
+					}))
+				)),
+				populateDropdown('colorFilter', await Promise.all(
+					Array.from(colors.keys()).map(async (id) => ({
+						id: id,
+						name: await getNameFromCollection('Color', id)
+					}))
+				)),
+				populateDropdown('yearFilter', await Promise.all(
+					Array.from(years.keys()).map(async (id) => ({
+						id: id,
+						name: await getNameFromCollection('Year', id)
+					}))
+				)),
+			]);
+
+			// Populate other dropdowns
+			populateDropdown('fuelTypeFilter', Array.from(fuelTypes).map(type => ({
+				id: type,
+				name: type
+			})));
+			populateDropdown('transmissionFilter', Array.from(transmissions).map(trans => ({
+				id: trans,
+				name: trans
+			})));
+			populateDropdown('steeringWheelFilter', Array.from(steeringWheels).map(wheel => ({
+				id: wheel,
+				name: wheel
+			})));
+		}
+
+		function populateDropdown(elementId, options) {
+			const select = document.getElementById(elementId);
+			select.innerHTML = '<option value="">All</option>';
+			options.forEach(option => {
+				const optionElement = document.createElement('option');
+				optionElement.value = option.id;
+				optionElement.textContent = option.name;
+				select.appendChild(optionElement);
+			});
+		}
+
+		// Enhanced loadCars function with filtering
 		async function loadCars() {
-        const carContainer = document.getElementById("car-container");
-        const querySnapshot = await getDocs(collection(db, "cars"));
+			const carContainer = document.getElementById("car-container");
 
-        carContainer.innerHTML = ""; // Clear previous data before loading new data
+			// Build query with filters
+			let carQuery = collection(db, "cars");
+			let constraints = [];
 
-        querySnapshot.forEach((doc) => {
-            const car = doc.data();
-            const carId = doc.id; // Get document ID (Stock ID)
+			// Check if any filters are applied
+			const hasFilters = Object.values(currentFilters).some(value => value !== '');
 
-            const carCard = `
-                <div class="col-md-4">
-                    <div class="model_pg1i clearfix">
-                        <div class="model_pg1i1">
-                            <div class="grid clearfix">
-                                <figure class="effect-jazz mb-0">
-                                    <a href="#">
-                                        <img src="${car.image1}" class="w-100 fixed-img" alt="${car.carName}">
-                                    </a>
-                                </figure>
-                            </div>
-                        </div>
+			// Add constraints based on selected filters
+			if (currentFilters.make) constraints.push(where("make", "==", currentFilters.make));
+			if (currentFilters.model) constraints.push(where("model", "==", currentFilters.model));
+			if (currentFilters.color) constraints.push(where("color", "==", currentFilters.color));
+			if (currentFilters.year) constraints.push(where("year", "==", currentFilters.year));
+			if (currentFilters.fuelType) constraints.push(where("fuelType", "==", currentFilters.fuelType));
+			if (currentFilters.transmission) constraints.push(where("transmission", "==", currentFilters.transmission));
+			if (currentFilters.steeringWheel) constraints.push(where("steeringWheel", "==", currentFilters.steeringWheel));
 
-                        <div class="model_m p-3 clearfix border-top-0">
-                            <div class="model_pg1i2 row">
-                                <div class="col-md-6 col-sm-6">
-                                    <div class="model_pg1i2l">
-                                        <h4>${car.carName}</h4>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 col-sm-6">
-                                    <div class="model_pg1i2r text-end">
-                                        <h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> ${car.price}</h3>
-                                        <h6 class="mb-0 font_14">Price</h6>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="model_pg1i3 row mt-4 mb-4">
-                                <div class="col-md-6 col-sm-6">
-                                    <div class="model_pg1i3l">
-                                        <h6><i class="fa fa-car col_oran me-1"></i> ${car.transmission}</h6>
-                                        <h6 class="mb-0 mt-3"><i class="fa fa-tint col_oran me-1"></i> ${car.fuelType}</h6>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 col-sm-6">
-                                    <div class="model_pg1i3l text-end">
-                                        <h6><i class="fa fa-user col_oran me-1"></i> ${car.steeringWheel} Hand</h6>
-                                        <h6 class="mb-0 mt-3"><i class="fa fa-calendar col_oran me-1"></i> ${car.cc} CC</h6>
-                                    </div>
-                                </div>
-                            </div>
-                            <hr>
-                            <div class="model_pg1i4 row text-center mt-4">
-                                <div class="col-md-12">
-                                    <h6 class="mb-0">
-                                        <a class="button view-btn" href="stock-details.html?stockId=${carId}">View <i class="fa fa-search ms-1"></i></a>
-                                    </h6>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
+			// Price range filter
+			if (currentFilters.minPrice || currentFilters.maxPrice) {
+				if (currentFilters.minPrice && currentFilters.maxPrice) {
+					constraints.push(
+						where("price", ">=", parseFloat(currentFilters.minPrice)),
+						where("price", "<=", parseFloat(currentFilters.maxPrice))
+					);
+				} else if (currentFilters.minPrice) {
+					constraints.push(where("price", ">=", parseFloat(currentFilters.minPrice)));
+				} else if (currentFilters.maxPrice) {
+					constraints.push(where("price", "<=", parseFloat(currentFilters.maxPrice)));
+				}
+			}
 
-            carContainer.innerHTML += carCard;
-        });
-    }
+			// Construct the query
+			carQuery = hasFilters
+				? query(collection(db, "cars"), ...constraints)
+				: query(collection(db, "cars"), limit(12));
 
-    loadCars();
+			const querySnapshot = await getDocs(carQuery);
+
+			carContainer.innerHTML = ""; // Clear previous data
+
+			if (querySnapshot.empty) {
+				carContainer.innerHTML = '<div class="col-12 text-center"><p>No cars found matching the selected filters.</p></div>';
+				return;
+			}
+
+			querySnapshot.forEach((doc) => {
+				const car = doc.data();
+				const carId = doc.id;
+
+				carContainer.innerHTML += createCarCard(car, carId);
+			});
+
+			// If no filters applied, show pagination
+			if (!hasFilters) {
+				const paginationContainer = document.getElementById("pagination");
+				paginationContainer.innerHTML = `
+					<button class="btn btn-primary" onclick="navigatePage(-1)" ${currentPage <= 1 ? 'disabled' : ''}>Previous</button>
+					<button class="btn btn-primary" onclick="navigatePage(1)">Next</button>
+				`;
+			} else {
+				// Clear pagination if filters are applied
+				const paginationContainer = document.getElementById("pagination");
+				paginationContainer.innerHTML = '';
+			}
+		}
+
+		// Function to apply filters
+		function applyFilters() {
+			// Collect filter values
+			currentFilters = {
+				make: document.getElementById('makeFilter').value,
+				model: document.getElementById('modelFilter').value,
+				color: document.getElementById('colorFilter').value,
+				year: document.getElementById('yearFilter').value,
+				minPrice: document.getElementById('minPriceFilter').value,
+				maxPrice: document.getElementById('maxPriceFilter').value,
+				fuelType: document.getElementById('fuelTypeFilter').value,
+				transmission: document.getElementById('transmissionFilter').value,
+				steeringWheel: document.getElementById('steeringWheelFilter').value
+			};
+
+			// Remove empty filter values
+			Object.keys(currentFilters).forEach(key =>
+				currentFilters[key] === '' && delete currentFilters[key]
+			);
+
+			// Reload cars with new filters
+			loadCars();
+		}
+
+		// Function to reset filters
+		function resetFilters() {
+			// Reset all dropdowns and inputs
+			document.getElementById('makeFilter').selectedIndex = 0;
+			document.getElementById('modelFilter').selectedIndex = 0;
+			document.getElementById('colorFilter').selectedIndex = 0;
+			document.getElementById('yearFilter').selectedIndex = 0;
+			document.getElementById('minPriceFilter').value = '';
+			document.getElementById('maxPriceFilter').value = '';
+			document.getElementById('fuelTypeFilter').selectedIndex = 0;
+			document.getElementById('transmissionFilter').selectedIndex = 0;
+			document.getElementById('steeringWheelFilter').selectedIndex = 0;
+
+			// Clear filters
+			currentFilters = {};
+
+			// Reload cars
+			loadCars();
+		}
+
+		// Pagination function
+		function navigatePage(direction) {
+			currentPage += direction;
+			loadCars();
+		}
+
+		// Add event listeners
+		document.addEventListener('DOMContentLoaded', () => {
+			// Populate dropdowns
+			populateDropdowns();
+
+			// Add event listeners to filter inputs
+			const filterInputs = document.querySelectorAll('#filterForm select, #filterForm input');
+			filterInputs.forEach(input => {
+				input.addEventListener('change', applyFilters);
+			});
+
+			// Reset button listener
+			document.getElementById('resetFilters').addEventListener('click', resetFilters);
+
+			// Initial load of cars
+			loadCars();
+		});
+
+		// Expose navigatePage to global scope for onclick event
+		window.navigatePage = navigatePage;
 	</script>
+	<style>
+		#filterForm {
+			background-color: #f8f9fa;
+			padding: 20px;
+			border-radius: 10px;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		}
+
+		#filterForm .form-label {
+			font-weight: 600;
+			color: #333;
+		}
+
+		#filterForm .form-select,
+		#filterForm .form-control {
+			border-color: #ddd;
+		}
+
+		#resetFilters {
+			background-color: #6c757d;
+			color: white;
+		}
+
+		#resetFilters:hover {
+			background-color: #545b62;
+		}
+
+		#pagination .btn {
+			background-color: red;
+			border: none;
+			margin: 0 10px;
+		}
+	</style>
 </head>
 
 <body>
@@ -192,11 +460,115 @@
 
 	</div>
 
+	<br /><br />
+
+	<div class="container-fluid">
+		<div class="row">
+			<!-- Sidebar Filter Section -->
+			<div class="col-md-3">
+				<div class="sidebar-filter">
+					<form id="filterForm" class="row g-3">
+						<div class="col-12">
+							<label for="makeFilter" class="form-label">Make</label>
+							<select id="makeFilter" class="form-select">
+								<option value="">All Makes</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="modelFilter" class="form-label">Model</label>
+							<select id="modelFilter" class="form-select">
+								<option value="">All Models</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="colorFilter" class="form-label">Color</label>
+							<select id="colorFilter" class="form-select">
+								<option value="">All Colors</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="yearFilter" class="form-label">Year</label>
+							<select id="yearFilter" class="form-select">
+								<option value="">All Years</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="fuelTypeFilter" class="form-label">Fuel Type</label>
+							<select id="fuelTypeFilter" class="form-select">
+								<option value="">All Fuel Types</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="transmissionFilter" class="form-label">Transmission</label>
+							<select id="transmissionFilter" class="form-select">
+								<option value="">All Transmissions</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="steeringWheelFilter" class="form-label">Steering Wheel</label>
+							<select id="steeringWheelFilter" class="form-select">
+								<option value="">All</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="minPriceFilter" class="form-label">Min Price</label>
+							<input type="number" id="minPriceFilter" class="form-control" placeholder="Min Price">
+						</div>
+						<div class="col-12">
+							<label for="maxPriceFilter" class="form-label">Max Price</label>
+							<input type="number" id="maxPriceFilter" class="form-control" placeholder="Max Price">
+						</div>
+						<div class="col-12">
+							<button type="button" id="resetFilters" class="btn btn-secondary w-100">Reset Filters</button>
+						</div>
+					</form>
+				</div>
+			</div>
+			
+			<!-- Car Listings Section -->
+			<div class="col-md-9">
+				<section id="model_pg" class="p_3">
+					<div class="row model_pg1" id="car-container">
+						<!-- Cars will be loaded here dynamically -->
+					</div>
+				</section>
+
+				<!-- Pagination container -->
+				<div id="pagination" class="text-center my-3"></div>
+			</div>
+		</div>
+	</div>
+
+	<style>
+		.fixed-img {
+			width: 90% !important;
+			height: 250px !important;
+			object-fit: cover;
+		}
+		.sidebar-filter {
+			background-color: #f8f9fa;
+			padding: 20px;
+			border-radius: 10px;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			max-height: 100vh;
+			overflow-y: auto;
+		}
+		#filterForm {
+			background-color: transparent !important;
+			padding: 0 !important;
+			box-shadow: none !important;
+		}
+		.car-listings {
+			background-color: white;
+			border-radius: 10px;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			padding: 20px;
+		}
+	</style>
+
 	<section id="model_pg" class="p_3">
 		<div class="container-xl">
-			<div class="row model_pg1" id="car-container">
-				<!-- Cars will be loaded here dynamically -->
-			</div>
+			
 		</div>
 	</section>
 
