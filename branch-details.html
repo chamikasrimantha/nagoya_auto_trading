@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Car Lease</title>
+	<link href="css/bootstrap.min.css" rel="stylesheet">
+	<link href="css/font-awesome.min.css" rel="stylesheet">
+	<link href="css/global.css" rel="stylesheet">
+	<link href="css/blog.css" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+	<script src="js/bootstrap.bundle.min.js"></script>
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+		import {
+			getFirestore,
+			collection,
+			getDocs,
+			query,
+			where,
+			doc,
+			getDoc
+		} from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+
+		// Firebase Config
+		const firebaseConfig = {
+			apiKey: "AIzaSyCXuKCcLMPIlRKE2HS36lVJG2kjBqnfREk",
+			authDomain: "nagoya-auto.firebaseapp.com",
+			projectId: "nagoya-auto",
+			storageBucket: "nagoya-auto.firebasestorage.app",
+			messagingSenderId: "718031210560",
+			appId: "1:718031210560:web:fde1b59ada6102eca437a5",
+			measurementId: "G-E2VNX8VFCZ"
+		};
+
+		// Initialize Firebase
+		const app = initializeApp(firebaseConfig);
+		const db = getFirestore(app);
+
+		// Pagination settings
+		const ITEMS_PER_PAGE = 6; // Number of cars per page
+
+		function getQueryParam(param) {
+			const urlParams = new URLSearchParams(window.location.search);
+			const value = urlParams.get(param);
+			if (!value) {
+				console.error("Error: Branch ID is missing in the URL.");
+			}
+			return value;
+		}
+
+		// New function to fetch branch name
+		async function fetchBranchName(branchId) {
+			try {
+				// Reference to the specific branch document
+				const branchDocRef = doc(db, "Branch", branchId);
+
+				// Get the document
+				const branchDoc = await getDoc(branchDocRef);
+
+				if (branchDoc.exists()) {
+					// Update the branch name in the page
+					const branchData = branchDoc.data();
+					const branchName = branchData.name || "Unknown Branch";
+
+					document.getElementById("branchName").textContent = branchName + " Branch";
+					document.getElementById("branchBreadcrumb").textContent = branchName;
+				} else {
+					console.error("No such branch found!");
+					document.getElementById("branchName").textContent = "Branch Not Found";
+				}
+			} catch (error) {
+				console.error("Error fetching branch name:", error);
+				document.getElementById("branchName").textContent = "Error Loading Branch";
+			}
+		}
+
+		// Render pagination
+		function renderPagination(totalItems, currentPage) {
+			const paginationContainer = document.getElementById('pagination');
+			const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+			// Clear previous pagination
+			paginationContainer.innerHTML = '';
+
+			// Previous button
+			if (currentPage > 1) {
+				const prevButton = document.createElement('button');
+				prevButton.classList.add('btn', 'btn-secondary', 'me-2');
+				prevButton.textContent = 'Previous';
+				prevButton.addEventListener('click', () => loadCars(branchId, currentPage - 1));
+				paginationContainer.appendChild(prevButton);
+			}
+
+			// Page numbers
+			for (let i = 1; i <= totalPages; i++) {
+				const pageButton = document.createElement('button');
+				pageButton.classList.add('btn', 'btn-outline-secondary', 'me-2');
+				if (i === currentPage) {
+					pageButton.classList.add('active');
+				}
+				pageButton.textContent = i;
+				pageButton.addEventListener('click', () => loadCars(branchId, i));
+				paginationContainer.appendChild(pageButton);
+			}
+
+			// Next button
+			if (currentPage < totalPages) {
+				const nextButton = document.createElement('button');
+				nextButton.classList.add('btn', 'btn-secondary');
+				nextButton.textContent = 'Next';
+				nextButton.addEventListener('click', () => loadCars(branchId, currentPage + 1));
+				paginationContainer.appendChild(nextButton);
+			}
+		}
+
+		// Currency conversion function
+		function convertUSDToLSL(usdPrice) {
+			// Exchange rate as of the last update (this should be periodically updated)
+			// Note: Always use the most current exchange rate in practice
+			const USD_TO_LSL_RATE = 18.50; // 1 USD = 18.50 LSL (approximate)
+
+			// Ensure usdPrice is a number
+			const numericPrice = typeof usdPrice === 'string'
+				? parseFloat(usdPrice.replace(/[^0-9.-]+/g, ""))
+				: Number(usdPrice);
+
+			// Check if conversion was successful
+			if (isNaN(numericPrice)) {
+				console.error('Invalid price:', usdPrice);
+				return 'N/A';
+			}
+
+			// Convert to LSL and round to nearest whole number
+			const lslPrice = Math.round(numericPrice * USD_TO_LSL_RATE);
+
+			// Format with thousands separator
+			return lslPrice.toLocaleString('en-ZA', {
+				style: 'currency',
+				currency: 'LSL',
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 0
+			});
+		}
+
+		async function loadCars(branchId, page = 1) {
+			const carContainer = document.getElementById("carCards");
+			carContainer.innerHTML = "<p>Loading cars...</p>";
+
+			try {
+				console.log("Attempting to load all cars and filter for branch:", branchId);
+
+				// Fetch all cars
+				const querySnapshot = await getDocs(collection(db, "cars"));
+
+				console.log("Total cars fetched:", querySnapshot.size);
+
+				// Filter cars client-side using 'branch' field
+				const filteredCars = querySnapshot.docs
+					.filter(doc => {
+						const car = doc.data();
+						console.log("Checking car branch:", car.branch);
+						return car.branch === branchId;
+					});
+
+				console.log("Filtered cars count:", filteredCars.length);
+
+				if (filteredCars.length === 0) {
+					carContainer.innerHTML = "<p>No cars available for this branch.</p>";
+					document.getElementById('pagination').innerHTML = '';
+					return;
+				}
+
+				// Pagination logic
+				const startIndex = (page - 1) * ITEMS_PER_PAGE;
+				const endIndex = startIndex + ITEMS_PER_PAGE;
+				const paginatedCars = filteredCars.slice(startIndex, endIndex);
+
+				carContainer.innerHTML = ""; // Clear loading message
+
+				paginatedCars.forEach((doc) => {
+					const car = doc.data();
+					const carId = doc.id;
+
+					const carCardHTML = `
+					<div style="margin-bottom: 25px;" class="col-md-4">
+						<div class="model_pg1i clearfix">
+							<div class="model_pg1i1">
+								<div class="grid clearfix">
+									<figure class="effect-jazz mb-0">
+										<a href="stock-details.html?stockId=${carId}">
+											<img src="${car.image1}" class="w-100 fixed-img" alt="${car.carName}">
+										</a>
+									</figure>
+								</div>
+							</div>
+			
+							<div class="model_m p-3 clearfix border-top-0">
+								<div class="model_pg1i2 row">
+									<div class="col-md-6 col-sm-6">
+										<div class="model_pg1i2l">
+											<h4>${car.carName}</h4>
+										</div>
+									</div>
+									<div class="col-md-6 col-sm-6">
+                            <div class="model_pg1i2r text-end">
+                                <h3 class="mb-1">
+                                    <i class="fa fa-dollar col_oran"></i> ${car.price} USD
+                                </h3>
+                                <h6 class="mb-0 font_14">
+                                    <i class="fa fa-money col_oran"></i> ${convertUSDToLSL(car.price)} LSL
+                                </h6>
+                            </div>
+                        </div>
+								</div>
+								<div class="model_pg1i3 row mt-4 mb-4">
+									<div class="col-md-6 col-sm-6">
+										<div class="model_pg1i3l">
+											<h6><i class="fa fa-car col_oran me-1"></i> ${car.transmission}</h6>
+											<h6 class="mb-0 mt-3"><i class="fa fa-tint col_oran me-1"></i> ${car.fuelType}</h6>
+										</div>
+									</div>
+									<div class="col-md-6 col-sm-6">
+										<div class="model_pg1i3l text-end">
+											<h6><i class="fa fa-user col_oran me-1"></i> ${car.steeringWheel} Hand</h6>
+											<h6 class="mb-0 mt-3"><i class="fa fa-calendar col_oran me-1"></i> ${car.cc} CC</h6>
+										</div>
+									</div>
+								</div>
+								<hr>
+								<div class="model_pg1i4 row text-center mt-4">
+									<div class="col-md-12">
+										<h6 class="mb-0">
+											<a class="button view-btn" href="stock-details.html?stockId=${carId}">View <i class="fa fa-search ms-1"></i></a>
+										</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					`;
+
+					carContainer.innerHTML += carCardHTML;
+				});
+
+				// Render pagination
+				renderPagination(filteredCars.length, page);
+
+			} catch (error) {
+				console.error("Error fetching cars:", error);
+				carContainer.innerHTML = `<p style='color: red;'>Error loading cars: ${error.message}</p>`;
+			}
+		}
+
+		// Get branch ID
+		const branchId = getQueryParam("branchId");
+
+		if (branchId) {
+			console.log("Branch ID:", branchId);
+
+			// Fetch branch name before loading cars
+			fetchBranchName(branchId);
+
+			loadCars(branchId);
+		} else {
+			document.getElementById("carCards").innerHTML = "<p>Error: Branch ID is missing in the URL.</p>";
+		}
+	</script>
+
+</head>
+
+<body>
+
+	<div class="main_o clearfix position-relative">
+		<div class="main_1 clearfix position-absolute top-0 w-100">
+			<section id="header">
+				<nav class="navbar navbar-expand-md navbar-light" id="navbar_sticky">
+					<div class="container-xl">
+						<a class="navbar-brand fs-3 p-0 fw-bold text-white" href="index.html">
+							<img src="img/logo.png" alt="Car Logo" class="me-1 fs-2 align-middle" style="height: 60px;">
+							<!-- CAR <br> 
+		<span class="fs-5 span_1">Lease</span> -->
+						</a>
+						<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+							data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+							aria-expanded="false" aria-label="Toggle navigation">
+							<span class="navbar-toggler-icon"></span>
+						</button>
+						<div class="collapse navbar-collapse" id="navbarSupportedContent">
+							<ul class="navbar-nav mb-0 ">
+								<li class="nav-item">
+									<a class="nav-link" aria-current="page" href="index.html">Home</a>
+								</li>
+								<li class="nav-item">
+									<a class="nav-link" href="about.html">About </a>
+								</li>
+								<li class="nav-item">
+									<a class="nav-link" href="stock.html">Stock </a>
+								</li>
+								<li class="nav-item">
+									<a class="nav-link active" href="branches.html">Branches </a>
+								</li>
+								<li class="nav-item">
+									<a class="nav-link" href="team.html">Team</a>
+								</li>
+								<!-- <li class="nav-item dropdown">
+									<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+										data-bs-toggle="dropdown" aria-expanded="false">
+										Pages
+									</a>
+									<ul class="dropdown-menu drop_1" aria-labelledby="navbarDropdown">
+										<li><a class="dropdown-item" href="login.html"> Login</a></li>
+										<li><a class="dropdown-item border-0" href="register.html"> Register</a></li>
+									</ul>
+								</li> -->
+								<li class="nav-item">
+									<a class="nav-link" href="contact.html">Contact</a>
+								</li>
+							</ul>
+							<ul class="navbar-nav mb-0 ms-auto">
+								<!-- <li class="nav-item">
+									<a class="nav-link" href="login.html">Sign In</a>
+								</li> -->
+								<li class="nav-item">
+									<a class="nav-link button_2 ms-2 me-2" href="register.html">Whatsapp <i
+											class="fa fa-whatsapp ms-1"></i></a>
+								</li>
+
+							</ul>
+						</div>
+					</div>
+				</nav>
+			</section>
+		</div>
+		<div class="main_2 clearfix">
+			<section id="center" class="center_dt">
+				<div class="center_om clearfix">
+					<div class="container-xl">
+						<div class="row center_o1">
+							<div class="col-md-12">
+								<h2 class="text-white" id="branchName">Loading Branch...</h2>
+								<h6 class="mb-0 mt-3 fw-normal col_oran">
+									<a class="text-light" href="index.html">Home</a>
+									<span class="mx-2 col_light">/</span>
+									<span id="branchBreadcrumb">Branch</span>
+								</h6>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+
+
+	</div>
+
+	<!-- <div class="row" id="carCards"></div> -->
+	<br /><br />
+	<div class="container-fluid">
+		<div class="row">
+			<!-- Sidebar Filter Section -->
+			<div class="col-md-3">
+				<div class="sidebar-filter">
+					<form id="filterForm" class="row g-3">
+						<div class="col-12">
+							<label class="form-label">Search a Car</label>
+						</div>
+						<div class="col-12">
+							<label for="makeFilter" class="form-label">Make</label>
+							<select id="makeFilter" class="form-select">
+								<option value="">All Makes</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="modelFilter" class="form-label">Model</label>
+							<select id="modelFilter" class="form-select">
+								<option value="">All Models</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="colorFilter" class="form-label">Color</label>
+							<select id="colorFilter" class="form-select">
+								<option value="">All Colors</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="yearFilter" class="form-label">Year</label>
+							<select id="yearFilter" class="form-select">
+								<option value="">All Years</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="fuelTypeFilter" class="form-label">Fuel Type</label>
+							<select id="fuelTypeFilter" class="form-select">
+								<option value="">All Fuel Types</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="transmissionFilter" class="form-label">Transmission</label>
+							<select id="transmissionFilter" class="form-select">
+								<option value="">All Transmissions</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="steeringWheelFilter" class="form-label">Steering Wheel</label>
+							<select id="steeringWheelFilter" class="form-select">
+								<option value="">All</option>
+							</select>
+						</div>
+						<div class="col-12">
+							<label for="minPriceFilter" class="form-label">Min Price</label>
+							<input type="number" id="minPriceFilter" class="form-control" placeholder="Min Price">
+						</div>
+						<div class="col-12">
+							<label for="maxPriceFilter" class="form-label">Max Price</label>
+							<input type="number" id="maxPriceFilter" class="form-control" placeholder="Max Price">
+						</div>
+						<div class="col-12">
+							<button type="button" id="resetFilters" class="btn btn-secondary w-100">Reset
+								Filters</button>
+						</div>
+					</form>
+				</div>
+			</div>
+
+			<!-- Car Listings Section -->
+			<div class="col-md-9">
+				<section id="model_pg" class="p_3">
+					<div class="row model_pg1" id="car-container">
+						<div class="row" id="carCards"></div>
+					</div>
+				</section>
+
+				<!-- Pagination container -->
+				<div id="pagination" class="text-center my-3"></div>
+			</div>
+		</div>
+	</div>
+
+	<style>
+		.fixed-img {
+			width: 90% !important;
+			height: 250px !important;
+			object-fit: cover;
+		}
+
+		.sidebar-filter {
+			background-color: #f8f9fa;
+			padding: 20px;
+			border-radius: 10px;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			max-height: 100vh;
+			overflow-y: auto;
+		}
+
+		#filterForm {
+			background-color: transparent !important;
+			padding: 0 !important;
+			box-shadow: none !important;
+		}
+
+		.car-listings {
+			background-color: white;
+			border-radius: 10px;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			padding: 20px;
+		}
+	</style>
+
+	<br/><br/>
+
+	<!-- <section id="blog" class="p_3">
+		<div class="container-xl">
+			<div class="row blog_1">
+				<div class="col-md-4">
+					<div class="blog_1l">
+						<div class="blog_1l1">
+							<div class="input-group">
+								<input type="text" class="form-control" placeholder="Search Here...">
+								<span class="input-group-btn">
+									<button class="btn btn-primary bg_oran" type="button">
+										<i class="fa fa-search"></i></button>
+								</span>
+							</div>
+						</div>
+						<div class="blog_1l2 mt-4  p-3 clearfix">
+							<h4>Archives</h4>
+							<hr class="line mb-4">
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">May
+									2020</a></h6>
+							<hr>
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a
+									href="blog_detail.html">June 2020</a></h6>
+							<hr>
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">
+									July 2020</a></h6>
+							<hr>
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">
+									Aug 2020</a></h6>
+							<hr>
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">
+									Sep 2020</a></h6>
+							<hr>
+							<h6 class="mb-0"><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a
+									href="blog_detail.html"> Oct 2020</a></h6>
+						</div>
+						<div class="blog_1l2 mt-4  p-3 clearfix">
+							<h4>Categories</h4>
+							<hr class="line mb-4">
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a
+									href="blog_detail.html">Driving News (10)</a></h6>
+							<hr>
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">
+									Rent Update (12)</a></h6>
+							<hr>
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">
+									Today News (14)</a></h6>
+							<hr>
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">
+									Blog Update (16)</a></h6>
+							<hr>
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">
+									Instagram News (18)</a></h6>
+							<hr>
+							<h6 class="mb-0"><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a
+									href="blog_detail.html"> Inspiration (17)</a></h6>
+						</div>
+						<div class="blog_1l2 mt-4  p-3 clearfix">
+							<h4>Newsletters</h4>
+							<hr class="line mb-4">
+							<p>Sign Up For Our Newsletter!</p>
+							<input class="form-control" placeholder="Subscribe" type="text">
+							<h6 class="mb-0 mt-4"><a class="button" href="#">Subscribe <i
+										class="fa fa-check-circle ms-1"></i> </a></h6>
+						</div>
+						<div class="blog_1l2 mt-4  p-3 clearfix">
+							<h4>Popular Tags</h4>
+							<hr class="line">
+							<ul class="mb-0">
+								<li class="d-inline-block"><a href="blog_detail.html">Consulting</a></li>
+								<li class="d-inline-block"><a href="blog_detail.html">Finance</a></li>
+								<li class="d-inline-block"><a href="blog_detail.html">Law</a></li>
+								<li class="d-inline-block"><a href="blog_detail.html">Corporate</a></li>
+								<li class="d-inline-block"><a href="blog_detail.html">Taxes</a></li>
+								<li class="d-inline-block"><a href="blog_detail.html">Meeting</a></li>
+								<li class="d-inline-block"><a href="blog_detail.html">Business</a></li>
+								<li class="d-inline-block"><a href="blog_detail.html">Investment</a></li>
+							</ul>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-8">
+					<div class="blog_1rdt">
+						<div class="blog_1rdt1">
+							<div class="grid clearfix">
+								<figure class="effect-jazz mb-0">
+									<a href="#"><img src="img/2.jpg" height="450" class="w-100" alt="abc"></a>
+								</figure>
+							</div>
+						</div>
+						<div class="blog_1rdt2">
+							<h6 class="mt-3 font_14"><i class="fa fa-calendar col_oran me-1"></i> 03 Feb, 2022 <i
+									class="fa fa-user col_oran me-1 ms-3"></i> Admin <i
+									class="fa fa-comments col_oran me-1 ms-3"></i> 3 Comments</h6>
+							<h2 class="mt-3"><a href="#">Nanotech Immersion Along The Highway</a></h2>
+							<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Voluptatem rerum voluptas harum
+								provident fugiat tempora architecto mollitia quos maiores perspiciatis, obcaecati,
+								placeat aut. Architecto eaque accusamus minima quis in earum dignissimos suscipit esse,
+								saepe repudiandae similique, expedita sed quam dolore impedit deleniti atque, dolorum
+								quasi repellendus quos sapiente.</p>
+							<blockquote class="blockquote bg_light p-4">
+								<p>Provident fugiat tempora architecto mollitia quos maiores perspiciatis obcaecati
+									placeat aunty koi thako Architecto eaque accusamus minima in earum impedit atque</p>
+								<h6 class="fw-normal mb-0"><strong>- Dapibus Diam </strong>of Google Inc.</h6>
+							</blockquote>
+							<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Necessitatibus dolor eaque
+								officia impedit corporis exercitationem vel nulla iure sequi ipsam.</p>
+							<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Voluptatem rerum voluptas harum
+								provident fugiat tempora architecto mollitia quos maiores perspiciatis, obcaecati,
+								placeat aut. Architecto eaque accusamus minima quis in earum dignissimos suscipit esse,
+								saepe repudiandae similique, expedita sed quam dolore impedit deleniti atque.
+							</p>
+							<hr>
+							<div class="blog_1rdt2i row">
+								<div class="col-md-7">
+									<div class="blog_1rdt2il">
+										<h4>Related Tags:</h4>
+										<ul class="mb-0">
+											<li class="d-inline-block"><a href="#">Consulting</a></li>
+											<li class="d-inline-block"><a href="#">Finance</a></li>
+											<li class="d-inline-block"><a href="#">Corporate</a></li>
+										</ul>
+									</div>
+								</div>
+								<div class="col-md-5">
+									<div class="blog_1rdt2ir text-end">
+										<h4>Social Share:</h4>
+										<ul class="social-network social-circle mb-0">
+											<li><a href="#" class="icoRss" title="Rss"><i
+														class="fa fa-pinterest"></i></a></li>
+											<li><a href="#" class="icoFacebook" title="Facebook"><i
+														class="fa fa-facebook"></i></a></li>
+											<li><a href="#" class="icoTwitter" title="Twitter"><i
+														class="fa fa-twitter"></i></a></li>
+											<li><a href="#" class="icoLinkedin" title="Linkedin"><i
+														class="fa fa-linkedin"></i></a></li>
+										</ul>
+									</div>
+								</div>
+							</div>
+						</div>
+						<hr>
+						<div class="blog_1rdt3 mt-4">
+							<h2>Recent post</h2>
+							<div class="row blog_h_1 mt-3">
+								<div class="col-md-6">
+									<div class="blog_h_1m position-relative clearfix">
+										<div class="blog_h_1mi clearfix">
+											<div class="grid clearfix">
+												<figure class="effect-jazz mb-0">
+													<a href="#"><img src="img/16.jpg" class="w-100" alt="abc"></a>
+												</figure>
+											</div>
+										</div>
+										<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
+											<h6 class="mb-0 fw-normal"><a href="#" class="button_1">Driving</a></h6>
+										</div>
+									</div>
+									<div class="blog_h_1m1 bg-white">
+										<h4><a href="#">Which Corporate tool is to choose?</a></h4>
+										<p>Our offices are located on the traditional, unced.</p>
+										<h6 class="mb-0"><a class="button" href="#">Read More <i
+													class="fa fa-check-circle ms-1"></i></a></h6>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="blog_h_1m position-relative clearfix">
+										<div class="blog_h_1mi clearfix">
+											<div class="grid clearfix">
+												<figure class="effect-jazz mb-0">
+													<a href="#"><img src="img/18.jpg" class="w-100" alt="abc"></a>
+												</figure>
+											</div>
+										</div>
+										<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
+											<h6 class="mb-0 fw-normal"><a href="#" class="button_1">Car Rent</a></h6>
+										</div>
+									</div>
+									<div class="blog_h_1m1 bg-white">
+										<h4><a href="#">How will you know success when it shows</a></h4>
+										<p>Our offices are located on the traditional, unced.</p>
+										<h6 class="mb-0"><a class="button" href="#">Read More <i
+													class="fa fa-check-circle ms-1"></i></a></h6>
+									</div>
+								</div>
+
+							</div>
+						</div>
+
+						<div class="blog_1rdt3 mt-4 bg_light p-4">
+							<div class="blog_1rdt3it row">
+								<div class="col-md-12">
+									<h2 class="mb-4">(03) Comments:</h2>
+								</div>
+							</div>
+							<div class="blog_1rdt3i row">
+								<div class="col-md-2 col-sm-2">
+									<div class="blog_1rdt3il">
+										<img src="img/33.jpg" class="w-100 rounded-circle" alt="abc">
+									</div>
+								</div>
+								<div class="col-md-10 col-sm-10">
+									<div class="blog_1rdt3il">
+										<h4>Eget Nulla <span class="pull-right"><a
+													class="button_1 pt-2 pb-2 ps-3 pe-3 font_14 fw-normal"
+													href="#">Reply</a></span></h4>
+										<h6 class="font_14 mt-3"><a href="#"><i
+													class="fa fa-calendar col_oran me-1"></i> 03 Feb, 2022</a> <a
+												href="#"><i class="fa fa-user col_oran me-1 ms-3"></i> Admin</a> <a
+												href="#"><i class="fa fa-comments col_oran me-1 ms-3"></i> 3
+												Comments</a></h6>
+										<p class="mb-0 font_14">Lorem Ipsum has been the industry’s standard dummy text
+											ever since the 1500s, when an unknown type specimen book.</p>
+									</div>
+								</div>
+							</div>
+							<hr>
+							<div class="blog_1rdt3i row">
+								<div class="col-md-2 col-sm-2">
+									<div class="blog_1rdt3il">
+										<img src="img/34.jpg" class="w-100 rounded-circle" alt="abc">
+									</div>
+								</div>
+								<div class="col-md-10 col-sm-10">
+									<div class="blog_1rdt3il">
+										<h4>Semper Porta <span class="pull-right"><a
+													class="button_1 pt-2 pb-2 ps-3 pe-3 font_14 fw-normal"
+													href="#">Reply</a></span></h4>
+										<h6 class="font_14 mt-3"><a href="#"><i
+													class="fa fa-calendar col_oran me-1"></i> 03 Feb, 2022</a> <a
+												href="#"><i class="fa fa-user col_oran me-1 ms-3"></i> Admin</a> <a
+												href="#"><i class="fa fa-comments col_oran me-1 ms-3"></i> 3
+												Comments</a></h6>
+										<p class="mb-0 font_14">Lorem Ipsum has been the industry’s standard dummy text
+											ever since the 1500s, when an unknown type specimen book.</p>
+									</div>
+								</div>
+							</div>
+							<hr>
+							<div class="blog_1rdt3i row">
+								<div class="col-md-2 col-sm-2">
+									<div class="blog_1rdt3il">
+										<img src="img/35.jpg" class="w-100 rounded-circle" alt="abc">
+									</div>
+								</div>
+								<div class="col-md-10 col-sm-10">
+									<div class="blog_1rdt3il">
+										<h4>Nulla Quis <span class="pull-right"><a
+													class="button_1 pt-2 pb-2 ps-3 pe-3 font_14 fw-normal"
+													href="#">Reply</a></span></h4>
+										<h6 class="font_14 mt-3"><a href="#"><i
+													class="fa fa-calendar col_oran me-1"></i> 03 Feb, 2022</a> <a
+												href="#"><i class="fa fa-user col_oran me-1 ms-3"></i> Admin</a> <a
+												href="#"><i class="fa fa-comments col_oran me-1 ms-3"></i> 3
+												Comments</a></h6>
+										<p class="mb-0 font_14">Lorem Ipsum has been the industry’s standard dummy text
+											ever since the 1500s, when an unknown type specimen book.</p>
+									</div>
+								</div>
+							</div>
+							<hr>
+							<div class="blog_1rdt3it row">
+								<div class="col-md-12">
+									<h2 class="mb-4">Leave a Reply:</h2>
+								</div>
+							</div>
+							<div class="blog_1rdt3i2 row">
+								<div class="col-md-6">
+									<div class="blog_1rdt3i2l">
+										<input class="form-control" placeholder="Name" type="text">
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="blog_1rdt3i2l">
+										<input class="form-control" placeholder="Email" type="text">
+									</div>
+								</div>
+							</div>
+							<div class="blog_1rdt3i2 row mt-3">
+								<div class="col-md-6">
+									<div class="blog_1rdt3i2l">
+										<input class="form-control" placeholder="Subject" type="text">
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="blog_1rdt3i2l">
+										<input class="form-control" placeholder="Website" type="text">
+									</div>
+								</div>
+							</div>
+							<div class="blog_1rdt3i2 row mt-3">
+								<div class="col-md-12">
+									<div class="blog_1rdt3i2l">
+										<textarea placeholder="Message" class="form-control form_text"></textarea>
+										<h6 class="mb-0 mt-3"><a class="button" href="#">Post Comment <i
+													class="fa fa-check-circle ms-1"></i> </a></h6>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section> -->
+
+	<section id="ride">
+		<div class="ride_m">
+			<div class="container-xl">
+				<div class="row ride_1">
+					<div class="col-md-8">
+						<div class="ride_1l">
+							<h1 class="text-white">Save big with Nagoya Auto Trading’s
+								affordable car buying options! <br> </h1>
+							<p class="text-light mb-0 fs-4 mt-3">Top Dealerships. Trusted Local Suppliers. 24/7 Customer
+								Support.</p>
+						</div>
+					</div>
+					<div class="col-md-4">
+						<div class="ride_1r mt-4 text-end">
+							<h6 class="mb-0"><a class="button_2" href="#">Buy a Car <i
+										class="fa fa-check-circle ms-1"></i> </a></h6>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section id="footer" class="pt-3 pb-3">
+		<div class="container-xl">
+			<div class="row footer_1">
+				<div class="col-md-4">
+					<div class="footer_1i">
+						<h4> Nagoya Auto Trading</h4>
+						<p class="mt-3">At Nagoya Auto Trading, we focus on providing top-quality services and products
+							to meet your
+							automotive needs.
+						</p>
+						<h6 class="mt-3 fw-normal"><i class="fa fa-map col_oran me-1"></i> Nagoya, Japan</h6>
+						<h6 class="mt-3 fw-normal"><a href="#"><i class="fa fa-phone col_oran me-1"></i> +(94) 76 184
+								4962</a></h6>
+						<h6 class="mt-3 mb-0 fw-normal"><a href="#"><i class="fa fa-envelope col_oran me-1"></i>
+								info@nagoya-auto-trading.com</a>
+						</h6>
+					</div>
+				</div>
+				<div class="col-md-2">
+					<div class="footer_1i">
+						<h4>COMPANY</h4>
+						<div class="row">
+							<h6 class="fw-normal mt-2 col-md-12 col-6"><a href="index.html">Nagoya</a></h6>
+							<h6 class="fw-normal mt-2 col-md-12 col-6"><a href="about.html">About Us</a></h6>
+							<h6 class="fw-normal mt-2 col-md-12 col-6"><a href="blog.html">Branches</a></h6>
+							<h6 class="fw-normal mt-2 col-md-12 col-6"><a href="models.html">Stock</a></h6>
+							<h6 class="fw-normal mt-2 col-md-12 col-6"><a href="team.html">Team</a></h6>
+							<h6 class="fw-normal mt-2 mb-0 col-md-12 col-6"><a href="contact.html">Contact Us</a></h6>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<div class="footer_1i">
+						<h4>WORK HOURS</h4>
+						<p class="mt-3">Mon - Fri: <span class="fw-bold text-black">08:00AM - 05:00PM</span></p>
+						<p class="mt-3">Sat: <span class="fw-bold text-black">08:00AM - 12:00PM</span></p>
+						<p class="mt-3 mb-0">Sun: <span class="fw-bold text-black">Closed</span></p>
+					</div>
+				</div>
+				<div class="col-md-3">
+					<div class="footer_1i">
+						<h4>SUBSCRIPTION</h4>
+						<p class="mt-3">Subscribe your Email address for latest news & updates.</p>
+						<input class="form-control" placeholder="Enter Email Address" type="text">
+						<h6 class="mb-0 mt-4"><a class="button pt-3 pb-3" href="#">Submit <i
+									class="fa fa-check-circle ms-1"></i>
+							</a></h6>
+					</div>
+				</div>
+			</div>
+			<hr>
+			<div class="row footer_2">
+				<div class="col-md-8">
+					<div class="footer_2l">
+						<p class="mb-0 mt-1">© 2025 Nagoya Auto Trading. All Rights Reserved | Designed & Developed by
+							<a class="col_green" href="https://www.easycat.live/">EasyCat Technologies</a>
+						</p>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="footer_2r text-end">
+						<ul class="social-network social-circle mb-0">
+							<li><a href="#" class="icoRss" title="Rss"><i class="fa fa-facebook"></i></a></li>
+							<li><a href="#" class="icoFacebook" title="Facebook"><i class="fa fa-instagram"></i></a>
+							</li>
+							<li><a href="#" class="icoTwitter" title="Twitter"><i class="fa fa-whatsapp"></i></a></li>
+							<li><a href="#" class="icoLinkedin" title="Linkedin"><i class="fa fa-linkedin"></i></a></li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<script>
+		window.onscroll = function () { myFunction() };
+
+		var navbar_sticky = document.getElementById("navbar_sticky");
+		var sticky = navbar_sticky.offsetTop;
+		var navbar_height = document.querySelector('.navbar').offsetHeight;
+
+		function myFunction() {
+			if (window.pageYOffset >= sticky + navbar_height) {
+				navbar_sticky.classList.add("sticky")
+				document.body.style.paddingTop = navbar_height + 'px';
+			} else {
+				navbar_sticky.classList.remove("sticky");
+				document.body.style.paddingTop = '0'
+			}
+		}
+	</script>
+
+</body>
+
+</html>

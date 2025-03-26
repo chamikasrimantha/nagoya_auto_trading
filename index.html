@@ -148,7 +148,7 @@
 				</div>
 			</section>
 		</div>
-		<div class="main_3 position-absolute w-100 clearfix">
+		<!-- <div class="main_3 position-absolute w-100 clearfix">
 			<section id="booking">
 				<div class="container-xl">
 					<div class="booking_m clearfix bg-white">
@@ -339,10 +339,167 @@
 					</div>
 				</div>
 			</section>
-		</div>
+		</div> -->
+		<script type="module">
+			import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
+			import {
+				getFirestore,
+				collection,
+				getDocs,
+				query,
+				limit
+			} from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
+			
+			// Firebase Config
+			const firebaseConfig = {
+				apiKey: "AIzaSyCXuKCcLMPIlRKE2HS36lVJG2kjBqnfREk",
+				authDomain: "nagoya-auto.firebaseapp.com",
+				projectId: "nagoya-auto",
+				storageBucket: "nagoya-auto.firebasestorage.app",
+				messagingSenderId: "718031210560",
+				appId: "1:718031210560:web:fde1b59ada6102eca437a5",
+				measurementId: "G-E2VNX8VFCZ"
+			};
+			
+			// Initialize Firebase
+			const app = initializeApp(firebaseConfig);
+			const db = getFirestore(app);
+			
+			function createCarCard(car, carId) {
+				return `
+					<div style="margin-bottom: 25px;" class="col-md-4">
+						<div class="model_pg1i clearfix">
+							<div class="model_pg1i1">
+								<div class="grid clearfix">
+									<figure class="effect-jazz mb-0">
+										<a href="stock-details.html?stockId=${carId}">
+											<img src="${car.image1}" class="w-100 fixed-img" alt="${car.carName}">
+										</a>
+									</figure>
+								</div>
+							</div>
+			
+							<div class="model_m p-3 clearfix border-top-0">
+								<div class="model_pg1i2 row">
+									<div class="col-md-6 col-sm-6">
+										<div class="model_pg1i2l">
+											<h4>${car.carName}</h4>
+										</div>
+									</div>
+									<div class="col-md-6 col-sm-6">
+										<div class="model_pg1i2r text-end">
+											<h3 class="mb-1"><i class="fa fa-dollar col_oran"></i> ${car.price}</h3>
+											<h6 class="mb-0 font_14">Price</h6>
+										</div>
+									</div>
+								</div>
+								<div class="model_pg1i3 row mt-4 mb-4">
+									<div class="col-md-6 col-sm-6">
+										<div class="model_pg1i3l">
+											<h6><i class="fa fa-car col_oran me-1"></i> ${car.transmission}</h6>
+											<h6 class="mb-0 mt-3"><i class="fa fa-tint col_oran me-1"></i> ${car.fuelType}</h6>
+										</div>
+									</div>
+									<div class="col-md-6 col-sm-6">
+										<div class="model_pg1i3l text-end">
+											<h6><i class="fa fa-user col_oran me-1"></i> ${car.steeringWheel} Hand</h6>
+											<h6 class="mb-0 mt-3"><i class="fa fa-calendar col_oran me-1"></i> ${car.cc} CC</h6>
+										</div>
+									</div>
+								</div>
+								<hr>
+								<div class="model_pg1i4 row text-center mt-4">
+									<div class="col-md-12">
+										<h6 class="mb-0">
+											<a class="button view-btn" href="stock-details.html?stockId=${carId}">View <i class="fa fa-search ms-1"></i></a>
+										</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				`;
+			}
+			
+			async function fetchAndDisplayCars() {
+				// Log to help diagnose the issue
+				console.log('fetchAndDisplayCars function called');
+			
+				// Try to find the container
+				const carListContainer = document.querySelector('#car-list');
+				
+				// Log the container to check if it exists
+				console.log('Car list container:', carListContainer);
+			
+				// Check if the container exists
+				if (!carListContainer) {
+					console.error('Could not find #car-list element');
+					return;
+				}
+			
+				try {
+					const carsCollection = collection(db, 'cars');
+					const carsQuery = query(carsCollection, limit(3));
+					const carsSnapshot = await getDocs(carsQuery);
+					
+					carListContainer.innerHTML = ''; // Clear any existing content
+			
+					// Log number of cars found
+					console.log(`Found ${carsSnapshot.size} cars`);
+			
+					carsSnapshot.forEach((doc) => {
+						const carData = doc.data();
+						const carCard = createCarCard(carData, doc.id);
+						carListContainer.innerHTML += carCard;
+					});
+				} catch (error) {
+					console.error("Error fetching cars:", error);
+					carListContainer.innerHTML = '<p>Error loading cars. Please try again later.</p>';
+				}
+			}
+			
+			// Use window.onload instead of DOMContentLoaded
+			window.onload = fetchAndDisplayCars;
+			</script>
+			<br/><br/>
+			<section class="model_pg clearfix">
+				<div style="background-color: rgb(237, 237, 237); padding-top: 40px; border-radius: 30px;" class="container-xl">
+					<h2 style="margin-left: 20px; padding-bottom: 20px;" class="mb-0">Trending now!</h2>
+					<div class="row" id="car-list">
+						<!-- Cars will be dynamically inserted here -->
+					</div>
+				</div>
+			</section>
+			<style>
+				.fixed-img {
+					width: 90% !important;
+					height: 250px !important;
+					object-fit: cover;
+				}
+				.sidebar-filter {
+					background-color: #f8f9fa;
+					padding: 20px;
+					border-radius: 10px;
+					box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+					max-height: 100vh;
+					overflow-y: auto;
+				}
+				#filterForm {
+					background-color: transparent !important;
+					padding: 0 !important;
+					box-shadow: none !important;
+				}
+				.car-listings {
+					background-color: white;
+					border-radius: 10px;
+					box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+					padding: 20px;
+				}
+			</style>
 	</div>
 
-	<section id="trip" class="p_3">
+	<br/>
+	<section style="margin-top: -10px;" id="trip" class="p_3">
 		<div class="container-xl">
 			<div class="row trip_1 text-center mb-4">
 				<div class="col-md-12">

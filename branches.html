@@ -12,20 +12,12 @@
 	<link href="css/blog.css" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
 	<script src="js/bootstrap.bundle.min.js"></script>
-
-	<script>
+	<script type="module">
 		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.3.1/firebase-app.js";
 		import {
 			getFirestore,
 			collection,
-			getDocs,
-			query,
-			where,
-			limit,
-			startAfter,
-			orderBy,
-			doc,
-			getDoc
+			getDocs
 		} from "https://www.gstatic.com/firebasejs/11.3.1/firebase-firestore.js";
 
 		const firebaseConfig = {
@@ -42,54 +34,47 @@
 		const db = getFirestore(app);
 
 		async function loadBranches() {
-			const branchesContainer = document.getElementById("branches-list");
-			const cardsContainer = document.getElementById("cards-container");
-			branchesContainer.innerHTML = "";
-			cardsContainer.innerHTML = "";
+			const branchContainer = document.querySelector(".blog_h_1");
+			branchContainer.innerHTML = ""; // Clear existing content
 
-			try {
-				const querySnapshot = await getDocs(collection(db, "Branch"));
-				querySnapshot.forEach((doc) => {
-					const data = doc.data();
-					const branchName = data.name;
-					const branchImage = data.image || "img/default.jpg";
-					const branchDescription = data.description || "No description available.";
+			const querySnapshot = await getDocs(collection(db, "Branch"));
 
-					// Adding branch to the sidebar list
-					const branchItem = `<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">${branchName}</a></h6><hr>`;
-					branchesContainer.innerHTML += branchItem;
+			querySnapshot.forEach((doc) => {
+				const branch = doc.data();
+				const branchId = doc.id; // Firestore document ID
+				const branchName = branch.name;
+				const branchCard = `
+					<div class="col-md-6">
+						<div class="blog_h_1m position-relative clearfix">
+							<div class="blog_h_1mi clearfix">
+								<div class="grid clearfix">
+									<figure class="effect-jazz mb-0">
+										<a href="blog_detail.html"><img src="img/2.jpg" class="w-100" alt="${branch.name}"></a>
+									</figure>
+								</div>
+							</div>
+							<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
+								<h6 class="mb-0 fw-normal"><a href="blog_detail.html" class="button_1">${branch.name}</a></h6>
+							</div>
+						</div>
+						<div class="blog_h_1m1 bg-white">
+							<p>Reliable sedans, SUVs, and commercial vehicles with seamless purchasing and financing.</p>
+							 <h6 class="mb-0">
+                        <a class="button" href="branch-details.html?branchId=${branchId}">Read More 
+                            <i class="fa fa-check-circle ms-1"></i>
+                        </a>
+                    </h6>
+						</div>
+					</div>
+				`;
 
-					// Adding branch to the cards section
-					const branchCard = `
-                <div class="col-md-6">
-                    <div class="blog_h_1m position-relative clearfix">
-                        <div class="blog_h_1mi clearfix">
-                            <div class="grid clearfix">
-                                <figure class="effect-jazz mb-0">
-                                    <a href="blog_detail.html"><img src="${branchImage}" class="w-100" alt="${branchName}"></a>
-                                </figure>
-                            </div>
-                        </div>
-                        <div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
-                            <h6 class="mb-0 fw-normal"><a href="blog_detail.html" class="button_1">${branchName}</a></h6>
-                        </div>
-                    </div>
-                    <div class="blog_h_1m1 bg-white">
-                        <p>${branchDescription}</p>
-                        <h6 class="mb-0"><a class="button" href="blog_detail.html">Read More <i class="fa fa-check-circle ms-1"></i></a></h6>
-                    </div>
-                </div>
-            `;
-					cardsContainer.innerHTML += branchCard;
-				});
-			} catch (error) {
-				console.error("Error fetching branches: ", error);
-			}
+				branchContainer.innerHTML += branchCard;
+			});
 		}
 
-		document.addEventListener("DOMContentLoaded", loadBranches);
-
+		loadBranches();
 	</script>
+
 </head>
 
 <body>
@@ -179,19 +164,20 @@
 				<div class="col-md-4">
 					<div class="blog_1l">
 						<div class="blog_1l1">
-							<div class="input-group">
+							<!-- <div class="input-group">
 								<input type="text" class="form-control" placeholder="Search Here...">
 								<span class="input-group-btn">
 									<button class="btn btn-primary bg_oran" type="button">
 										<i class="fa fa-search"></i></button>
 								</span>
-							</div>
+							</div> -->
 						</div>
 						<div class="blog_1l2 mt-4  p-3 clearfix">
 							<h4>Branches</h4>
 							<hr class="line mb-4">
-							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a href="blog_detail.html">Phillipines
-									</a></h6>
+							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a
+									href="blog_detail.html">Phillipines
+								</a></h6>
 							<hr>
 							<h6><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a
 									href="blog_detail.html">Lesotho</a></h6>
@@ -212,7 +198,7 @@
 									href="blog_detail.html"> Uganda</a></h6>
 							<hr>
 							<h6 class="mb-0"><i class="fa fa-chevron-right font_14 me-1 col_oran"></i> <a
-								 	href="blog_detail.html"> Botswana</a></h6>
+									href="blog_detail.html"> Botswana</a></h6>
 						</div>
 						<div class="blog_1l2 mt-4  p-3 clearfix">
 							<h4>Subscribe</h4>
@@ -227,180 +213,6 @@
 				<div class="col-md-8">
 					<div class="blog_1r">
 						<div class="row blog_h_1">
-							<div class="col-md-6">
-								<div class="blog_h_1m position-relative clearfix">
-									<div class="blog_h_1mi clearfix">
-										<div class="grid clearfix">
-											<figure class="effect-jazz mb-0">
-												<a href="blog_detail.html"><img src="img/11.jpg" class="w-100"
-														alt="abc"></a>
-											</figure>
-										</div>
-									</div>
-									<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
-										<h6 class="mb-0 fw-normal"><a href="blog_detail.html"
-												class="button_1">Lesotho</a></h6>
-									</div>
-								</div>
-								<div class="blog_h_1m1 bg-white">
-									<p>Reliable sedans, SUVs, and commercial vehicles with seamless purchasing and financing.</p>
-									<h6 class="mb-0"><a class="button" href="blog_detail.html">Read More <i
-												class="fa fa-check-circle ms-1"></i></a></h6>
-								</div>
-							</div>
-							<div class="col-md-6">
-								<div class="blog_h_1m position-relative clearfix">
-									<div class="blog_h_1mi clearfix">
-										<div class="grid clearfix">
-											<figure class="effect-jazz mb-0">
-												<a href="blog_detail.html"><img src="img/12.jpg" class="w-100"
-														alt="abc"></a>
-											</figure>
-										</div>
-									</div>
-									<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
-										<h6 class="mb-0 fw-normal"><a href="blog_detail.html" class="button_1">Phillipines
-												</a></h6>
-									</div>
-								</div>
-								<div class="blog_h_1m1 bg-white">
-									<p>Offering new and pre-owned cars with flexible financing options and competitive prices.</p>
-									<h6 class="mb-0"><a class="button" href="blog_detail.html">Read More <i
-												class="fa fa-check-circle ms-1"></i></a></h6>
-								</div>
-							</div>
-
-						</div>
-						<div class="row blog_h_1 mt-4">
-							<div class="col-md-6">
-								<div class="blog_h_1m position-relative clearfix">
-									<div class="blog_h_1mi clearfix">
-										<div class="grid clearfix">
-											<figure class="effect-jazz mb-0">
-												<a href="blog_detail.html"><img src="img/16.jpg" class="w-100"
-														alt="abc"></a>
-											</figure>
-										</div>
-									</div>
-									<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
-										<h6 class="mb-0 fw-normal"><a href="blog_detail.html"
-												class="button_1">Canada</a></h6>
-									</div>
-								</div>
-								<div class="blog_h_1m1 bg-white">
-									<p>Premium and luxury car sales with flexible leasing and trade-in options.</p>
-									<h6 class="mb-0"><a class="button" href="blog_detail.html">Read More <i
-												class="fa fa-check-circle ms-1"></i></a></h6>
-								</div>
-							</div>
-							<div class="col-md-6">
-								<div class="blog_h_1m position-relative clearfix">
-									<div class="blog_h_1mi clearfix">
-										<div class="grid clearfix">
-											<figure class="effect-jazz mb-0">
-												<a href="blog_detail.html"><img src="img/18.jpg" class="w-100"
-														alt="abc"></a>
-											</figure>
-										</div>
-									</div>
-									<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
-										<h6 class="mb-0 fw-normal"><a href="blog_detail.html" class="button_1">United
-												Kingdom</a></h6>
-									</div>
-								</div>
-								<div class="blog_h_1m1 bg-white">
-									<p>Wide selection, including hybrids and EVs, with expert financing guidance.</p>
-									<h6 class="mb-0"><a class="button" href="blog_detail.html">Read More <i
-												class="fa fa-check-circle ms-1"></i></a></h6>
-								</div>
-							</div>
-
-						</div>
-						<div class="row blog_h_1 mt-4">
-							<div class="col-md-6">
-								<div class="blog_h_1m position-relative clearfix">
-									<div class="blog_h_1mi clearfix">
-										<div class="grid clearfix">
-											<figure class="effect-jazz mb-0">
-												<a href="blog_detail.html"><img src="img/19.jpg" class="w-100"
-														alt="abc"></a>
-											</figure>
-										</div>
-									</div>
-									<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
-										<h6 class="mb-0 fw-normal"><a href="blog_detail.html"
-												class="button_1">Australia</a></h6>
-									</div>
-								</div>
-								<div class="blog_h_1m1 bg-white">
-									<p>Smooth buying process with diverse vehicle options and attractive financing.</p>
-									<h6 class="mb-0"><a class="button" href="blog_detail.html">Read More <i
-												class="fa fa-check-circle ms-1"></i></a></h6>
-								</div>
-							</div>
-							<div class="col-md-6">
-								<div class="blog_h_1m position-relative clearfix">
-									<div class="blog_h_1mi clearfix">
-										<div class="grid clearfix">
-											<figure class="effect-jazz mb-0">
-												<a href="blog_detail.html"><img src="img/20.jpg" class="w-100"
-														alt="abc"></a>
-											</figure>
-										</div>
-									</div>
-									<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
-										<h6 class="mb-0 fw-normal"><a href="blog_detail.html" class="button_1">South
-												Africa</a></h6>
-									</div>
-								</div>
-								<div class="blog_h_1m1 bg-white">
-									<p>Affordable city cars and rugged 4x4s with strong customer support.</p>
-									<h6 class="mb-0"><a class="button" href="blog_detail.html">Read More <i
-												class="fa fa-check-circle ms-1"></i></a></h6>
-								</div>
-							</div>
-							<div class="col-md-6">
-								<div class="blog_h_1m position-relative clearfix">
-									<div class="blog_h_1mi clearfix">
-										<div class="grid clearfix">
-											<figure class="effect-jazz mb-0">
-												<a href="blog_detail.html"><img src="img/20.jpg" class="w-100"
-														alt="abc"></a>
-											</figure>
-										</div>
-									</div>
-									<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
-										<h6 class="mb-0 fw-normal"><a href="blog_detail.html" class="button_1">Uganda
-												</a></h6>
-									</div>
-								</div>
-								<div class="blog_h_1m1 bg-white">
-									<p>Trusted for new and used cars with competitive pricing and after-sales service.</p>
-									<h6 class="mb-0"><a class="button" href="blog_detail.html">Read More <i
-												class="fa fa-check-circle ms-1"></i></a></h6>
-								</div>
-							</div>
-							<div class="col-md-6">
-								<div class="blog_h_1m position-relative clearfix">
-									<div class="blog_h_1mi clearfix">
-										<div class="grid clearfix">
-											<figure class="effect-jazz mb-0">
-												<a href="blog_detail.html"><img src="img/20.jpg" class="w-100"
-														alt="abc"></a>
-											</figure>
-										</div>
-									</div>
-									<div class="blog_h_1mi1 position-absolute clearfix top-0 w-100 p-3">
-										<h6 class="mb-0 fw-normal"><a href="blog_detail.html" class="button_1">Botswana
-												</a></h6>
-									</div>
-								</div>
-								<div class="blog_h_1m1 bg-white">
-									<p> Quality vehicles for all needs, from family cars to business fleets.</p>
-									<h6 class="mb-0"><a class="button" href="blog_detail.html">Read More <i
-												class="fa fa-check-circle ms-1"></i></a></h6>
-								</div>
-							</div>
 
 						</div>
 					</div>
@@ -417,7 +229,8 @@
 						<div class="ride_1l">
 							<h1 class="text-white">Save big with Nagoya Auto Trading’s
 								affordable car buying options! <br> </h1>
-							<p class="text-light mb-0 fs-4 mt-3">Top Dealerships. Trusted Local Suppliers. 24/7 Customer Support.</p>
+							<p class="text-light mb-0 fs-4 mt-3">Top Dealerships. Trusted Local Suppliers. 24/7 Customer
+								Support.</p>
 						</div>
 					</div>
 					<div class="col-md-4">
@@ -486,7 +299,8 @@
 				<div class="col-md-8">
 					<div class="footer_2l">
 						<p class="mb-0 mt-1">© 2025 Nagoya Auto Trading. All Rights Reserved | Designed & Developed by
-							<a class="col_green" href="https://www.easycat.live/">EasyCat Technologies</a></p>
+							<a class="col_green" href="https://www.easycat.live/">EasyCat Technologies</a>
+						</p>
 					</div>
 				</div>
 				<div class="col-md-4">
